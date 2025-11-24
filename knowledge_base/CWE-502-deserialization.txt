@@ -1,0 +1,141 @@
+# CWE-502: Insecure Deserialization Prevention
+
+## Description
+Insecure deserialization occurs when untrusted data is used to create objects, potentially allowing attackers to execute arbitrary code or manipulate application state.
+
+## Remediation Techniques
+
+### 1. Use Safe Serialization Formats
+Prefer data-only formats like JSON instead of object serialization.
+
+**Python:**
+```python
+import json
+
+# BAD: Using pickle with untrusted data
+import pickle
+user_obj = pickle.loads(untrusted_data)
+
+# GOOD: Use JSON
+user_data = json.loads(untrusted_data)
+user_obj = User(**user_data)  # Manually construct object
+```
+
+### 2. Validate and Sanitize Input
+When deserialization is necessary, validate the input thoroughly.
+
+**Python (with schema validation):**
+```python
+import json
+from jsonschema import validate, ValidationError
+
+schema = {
+    "type": "object",
+    "properties": {
+        "username": {"type": "string"},
+        "email": {"type": "string", "format": "email"}
+    },
+    "required": ["username", "email"]
+}
+
+def safe_load_user(data_string):
+    # Parse JSON
+    data = json.loads(data_string)
+    
+    # Validate against schema
+    validate(instance=data, schema=schema)
+    
+    # Construct object safely
+    return User(username=data['username'], email=data['email'])
+```
+
+### 3. Use Safe Deserialization Libraries
+**Python (use safe_load for YAML):**
+```python
+import yaml
+
+# BAD: yaml.load() can execute arbitrary code
+data = yaml.load(untrusted_input)
+
+# GOOD: Use safe_load
+data = yaml.safe_load(untrusted_input)
+```
+
+### 4. Implement Type Checking
+**Python (with type hints and validation):**
+```python
+from pydantic import BaseModel
+
+class User(BaseModel):
+    username: str
+    email: str
+    age: int
+
+# Pydantic validates types automatically
+user = User.parse_raw(json_string)
+```
+
+### 5. Restrict Deserialization Classes
+If pickle is absolutely necessary, restrict allowed classes:
+
+**Python:**
+```python
+import pickle
+import io
+
+class RestrictedUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # Only allow specific classes
+        if module == "myapp.models" and name in ["User", "Profile"]:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(f"Class {module}.{name} not allowed")
+
+def safe_pickle_load(data):
+    return RestrictedUnpickler(io.BytesIO(data)).load()
+```
+
+### 6. Use Message Authentication
+Sign serialized data to detect tampering:
+
+**Python (with HMAC):**
+```python
+import hmac
+import hashlib
+import json
+
+SECRET_KEY = os.environ['SECRET_KEY']
+
+def serialize_with_signature(obj):
+    data = json.dumps(obj)
+    signature = hmac.new(
+        SECRET_KEY.encode(),
+        data.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return json.dumps({'data': data, 'signature': signature})
+
+def deserialize_with_verification(signed_data):
+    container = json.loads(signed_data)
+    data = container['data']
+    signature = container['signature']
+    
+    expected_sig = hmac.new(
+        SECRET_KEY.encode(),
+        data.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected_sig):
+        raise ValueError("Invalid signature")
+    
+    return json.loads(data)
+```
+
+## Key Points
+- AVOID pickle, marshal, and other object serialization for untrusted data
+- Use JSON, MessagePack, or Protocol Buffers instead
+- Validate input against a schema
+- Use safe_load() for YAML
+- Implement signature verification for data integrity
+- Use libraries with built-in validation (e.g., Pydantic)
+- Never deserialize data from untrusted sources without validation

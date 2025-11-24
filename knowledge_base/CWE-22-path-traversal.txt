@@ -1,0 +1,88 @@
+# CWE-22: Path Traversal Prevention
+
+## Description
+Path Traversal vulnerabilities allow attackers to access files outside the intended directory by using special characters like "../" in file paths.
+
+## Remediation Techniques
+
+### 1. Path Validation and Normalization
+Always validate and normalize file paths before use.
+
+**Python:**
+```python
+import os
+from pathlib import Path
+
+def safe_join(base_dir, user_path):
+    # Normalize and resolve the path
+    base = Path(base_dir).resolve()
+    target = (base / user_path).resolve()
+    
+    # Ensure the target is within base directory
+    if not target.is_relative_to(base):
+        raise ValueError("Invalid path")
+    
+    return target
+```
+
+### 2. Use Allowlists
+Maintain a list of allowed files or patterns:
+
+**Python:**
+```python
+ALLOWED_FILES = {'document.pdf', 'image.jpg', 'report.txt'}
+
+def download_file(filename):
+    if filename not in ALLOWED_FILES:
+        raise ValueError("File not allowed")
+    
+    return send_file(f'/var/data/{filename}')
+```
+
+### 3. Input Validation
+- Remove or reject suspicious characters: `..`, `/`, `\`
+- Validate file extensions
+- Use regex patterns to ensure expected format
+
+**Python:**
+```python
+import re
+
+def validate_filename(filename):
+    # Only allow alphanumeric, dash, underscore, and dot
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', filename):
+        raise ValueError("Invalid filename")
+    
+    # Reject path traversal attempts
+    if '..' in filename or '/' in filename:
+        raise ValueError("Path traversal detected")
+    
+    return filename
+```
+
+### 4. Use Secure File APIs
+**Python (Flask):**
+```python
+from werkzeug.utils import secure_filename
+
+@app.route('/download')
+def download_file():
+    filename = secure_filename(request.args.get('file'))
+    safe_path = os.path.join(UPLOAD_FOLDER, filename)
+    
+    # Additional check
+    if not os.path.commonprefix([safe_path, UPLOAD_FOLDER]) == UPLOAD_FOLDER:
+        abort(400)
+    
+    return send_file(safe_path)
+```
+
+### 5. Chroot/Sandboxing
+For sensitive applications, use chroot jails or containerization to limit file system access.
+
+## Key Points
+- NEVER directly concatenate user input into file paths
+- Always normalize and validate paths
+- Use allowlists when possible
+- Check that resolved paths are within expected directories
+- Use framework utilities like `secure_filename`

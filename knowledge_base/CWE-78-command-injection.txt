@@ -1,0 +1,87 @@
+# CWE-78: OS Command Injection Prevention
+
+## Description
+OS Command Injection occurs when untrusted data is passed to system commands, allowing attackers to execute arbitrary commands.
+
+## Remediation Techniques
+
+### 1. Avoid Shell Commands (Recommended)
+Use native libraries instead of shell commands whenever possible.
+
+**Python (Ping Example):**
+```python
+# BAD: Using os.system
+import os
+os.system(f"ping -c 1 {hostname}")
+
+# GOOD: Use subprocess with list arguments
+import subprocess
+result = subprocess.run(
+    ['ping', '-c', '1', hostname],
+    capture_output=True,
+    timeout=5
+)
+```
+
+### 2. Use Parameterized Execution
+Pass arguments as a list, not as a shell string.
+
+**Python:**
+```python
+import subprocess
+
+# SAFE: Arguments passed as list
+subprocess.run(['ls', '-l', directory], shell=False)
+
+# UNSAFE: String passed to shell
+subprocess.run(f'ls -l {directory}', shell=True)
+```
+
+### 3. Input Validation and Sanitization
+If shell commands are unavoidable:
+
+**Python:**
+```python
+import shlex
+import subprocess
+
+def safe_command(user_input):
+    # Validate input format
+    if not user_input.replace('.', '').replace('-', '').isalnum():
+        raise ValueError("Invalid input")
+    
+    # Use shlex.quote for shell escaping
+    safe_input = shlex.quote(user_input)
+    subprocess.run(f'ping -c 1 {safe_input}', shell=True)
+```
+
+### 4. Use Allowlists
+Restrict inputs to known safe values:
+
+**Python:**
+```python
+ALLOWED_HOSTS = {'localhost', 'example.com', '192.168.1.1'}
+
+def ping_host(hostname):
+    if hostname not in ALLOWED_HOSTS:
+        raise ValueError("Host not allowed")
+    
+    subprocess.run(['ping', '-c', '1', hostname])
+```
+
+### 5. Disable Shell Interpretation
+**Python:**
+```python
+# Always use shell=False (default)
+subprocess.run(['command', arg1, arg2], shell=False)
+
+# Avoid shell=True unless absolutely necessary
+```
+
+## Key Points
+- NEVER pass untrusted input to shell commands
+- Use subprocess.run() with argument lists, not strings
+- Set shell=False (default behavior)
+- Use native libraries instead of shell commands
+- If shell is required, use shlex.quote() for escaping
+- Validate and restrict inputs with allowlists

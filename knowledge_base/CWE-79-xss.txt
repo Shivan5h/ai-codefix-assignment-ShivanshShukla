@@ -1,0 +1,68 @@
+# CWE-79: Cross-Site Scripting (XSS) Prevention
+
+## Description
+Cross-Site Scripting occurs when untrusted data is included in web pages without proper validation or escaping, allowing attackers to inject malicious scripts.
+
+## Remediation Techniques
+
+### 1. Output Encoding (Most Important)
+Always encode data before inserting it into HTML, JavaScript, CSS, or URLs.
+
+**JavaScript (DOM Manipulation):**
+```javascript
+// BAD: innerHTML with untrusted data
+element.innerHTML = userInput;
+
+// GOOD: Use textContent or createTextNode
+element.textContent = userInput;
+// OR
+element.appendChild(document.createTextNode(userInput));
+```
+
+**React (Automatic Escaping):**
+```javascript
+// React automatically escapes JSX expressions
+function DisplayMessage({ msg }) {
+    return <div>{msg}</div>;
+}
+```
+
+### 2. Use Modern Framework Features
+Modern frameworks like React, Vue, and Angular automatically escape content.
+
+**Vue.js:**
+```javascript
+<!-- Automatically escaped -->
+<div>{{ userInput }}</div>
+
+<!-- Dangerous (avoid unless necessary) -->
+<div v-html="trustedHtml"></div>
+```
+
+### 3. Content Security Policy (CSP)
+Implement CSP headers to restrict script execution:
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'
+```
+
+### 4. Input Validation
+- Validate input format and type
+- Use allowlists for expected values
+- Reject or sanitize suspicious input
+
+### 5. Use Sanitization Libraries
+When HTML input is required:
+
+**JavaScript (DOMPurify):**
+```javascript
+import DOMPurify from 'dompurify';
+const clean = DOMPurify.sanitize(dirtyHtml);
+element.innerHTML = clean;
+```
+
+## Key Points
+- NEVER use innerHTML with untrusted data
+- Use textContent or framework escaping
+- Implement CSP headers
+- Sanitize HTML only when absolutely necessary
+- Validate all user inputs

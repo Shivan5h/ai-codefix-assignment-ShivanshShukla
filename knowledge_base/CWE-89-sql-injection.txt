@@ -1,0 +1,54 @@
+# CWE-89: SQL Injection Prevention
+
+## Description
+SQL Injection occurs when untrusted data is concatenated directly into SQL queries, allowing attackers to manipulate database operations.
+
+## Remediation Techniques
+
+### 1. Use Parameterized Queries (Recommended)
+Always use parameterized queries or prepared statements instead of string concatenation.
+
+**Python (sqlite3):**
+```python
+cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+```
+
+**Python (psycopg2):**
+```python
+cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+```
+
+**Python (SQLAlchemy):**
+```python
+from sqlalchemy import text
+query = text("SELECT * FROM users WHERE username = :username")
+result = session.execute(query, {"username": username})
+```
+
+### 2. Use ORM Methods
+Object-Relational Mapping frameworks provide safe query construction.
+
+**Python (SQLAlchemy ORM):**
+```python
+user = session.query(User).filter_by(username=username).first()
+```
+
+**Python (Django ORM):**
+```python
+user = User.objects.filter(username=username).first()
+```
+
+### 3. Input Validation
+- Validate and sanitize all user inputs
+- Use allowlists for expected values
+- Escape special characters when parameterization is not possible
+
+### 4. Least Privilege Principle
+- Use database accounts with minimal required permissions
+- Avoid using admin/root database accounts in application code
+
+## Key Points
+- NEVER concatenate user input into SQL queries
+- Always use parameterized queries or ORM methods
+- Validate input types and formats
+- Apply principle of least privilege

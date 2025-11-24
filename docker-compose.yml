@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ai-remediation:
+    build: .
+    container_name: ai-code-remediation
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_NAME=Qwen/Qwen2.5-Coder-1.5B-Instruct
+      - DEVICE=auto
+      - ENABLE_RAG=true
+      - USE_4BIT=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./knowledge_base:/app/knowledge_base
+      - model_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
+volumes:
+  model_cache:
